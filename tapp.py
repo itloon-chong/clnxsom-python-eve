@@ -41,7 +41,6 @@ import cv2
 import os
 import sys
 import yaml
-import pytest
 from pathlib import Path
 from datetime import datetime
 
@@ -72,7 +71,7 @@ def test_prerequisites():
         return True
 
 
-def test_program():
+def run_test_program():
     """
     Interactive test program for EVE SDK frame and metadata capture.
     
@@ -128,14 +127,15 @@ def test_program():
         wrapper.init(useMetadataCamera=True)
         print("✅ EVE SDK initialized successfully")
         
-        # Configure features
-        features = {
+        # Configure features from config
+        features = config.get('features', {
             "face_detection": {"enabled": True},
             "person_detection": {"enabled": True},
             "hand_landmarks": {"enabled": True},
             "face_id": {"enabled": False},
-            "face_id_multi": {"enabled": False}
-        }
+            "face_id_multi": {"enabled": False},
+            "object_detection": {"enabled": False}
+        })
         
         if wrapper.isFpgaEnabled():
             wrapper.configureFpga(features)
@@ -290,7 +290,7 @@ def run_interactive_program():
         print("\n❌ Prerequisites check failed. Please install missing dependencies.")
         return
     
-    test_program()
+    run_test_program()
 
 
 # Main execution - just run the interactive program directly

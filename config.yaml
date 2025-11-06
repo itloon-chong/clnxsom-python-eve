@@ -12,3 +12,17 @@ eve:
   to_jpg: true
   copy_image: false
   max_width: 800
+
+features:
+  face_detection:
+    enabled: true
+  person_detection:
+    enabled: true
+  hand_landmarks:
+    enabled: true
+  face_id:
+    enabled: false
+  face_id_multi:
+    enabled: false
+  object_detection:
+    enabled: false
