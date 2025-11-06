@@ -1,0 +1,14 @@
+i2c:
+  start_flag: 0x7E
+  bus: 0
+  device_address: 0x30
+  irq_pin: 26
+
+eve:
+  comport: 0
+  pipeline_version: 0
+  eve_path: '/opt/EVE-6.6.0-Source/bin'
+  driver_path: '/home/lattice/mY_Work/eve-cam/clnx_camDrvEn'
+  to_jpg: true
+  copy_image: false
+  max_width: 800
