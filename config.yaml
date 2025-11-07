@@ -12,6 +12,7 @@ eve:
   to_jpg: true
   copy_image: false
   max_width: 800
+  use_metadata_camera: true
 
 features:
   face_detection:

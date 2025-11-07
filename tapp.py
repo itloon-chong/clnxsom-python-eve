@@ -16,6 +16,7 @@ CAPTURE MODES:
 - 'c': Capture frame (image + metadata) -> saves to image.jpg and metadata.txt
 - 'm': Capture metadata only -> saves to metadata.txt
 - 'i': Capture image only -> saves to image.jpg
+- 's': Settings/Configuration mode -> configure EVE features interactively
 - 'x': Exit program
 
 RASPBERRY PI SETUP REQUIREMENTS:
@@ -79,12 +80,14 @@ def run_test_program():
     - Capture current frame (image + metadata)
     - Capture metadata only
     - Capture image only
+    - Configure EVE features interactively
     - Exit the program
     
     Controls:
     - 'c': Capture frame (image + metadata) -> saves to image.jpg and metadata.txt
     - 'm': Capture metadata only -> saves to metadata.txt
-    - 'i': Capture image only -> saves to image.jpg  
+    - 'i': Capture image only -> saves to image.jpg
+    - 's': Settings/Configuration mode -> configure EVE features interactively
     - 'x': Exit program
     """
     
@@ -123,8 +126,9 @@ def run_test_program():
             driverPath=eve_config.get('driver_path', '/home/lattice/mY_Work/eve-cam/clnx_camDrvEn')
         )
         
-        # Initialize with metadata camera
-        wrapper.init(useMetadataCamera=True)
+        # Initialize with metadata camera setting from config
+        use_metadata_camera = eve_config.get('use_metadata_camera', True)
+        wrapper.init(useMetadataCamera=use_metadata_camera)
         print("✅ EVE SDK initialized successfully")
         
         # Configure features from config
@@ -157,6 +161,7 @@ def run_test_program():
         print("  'c' - Capture frame (image + metadata)")
         print("  'm' - Capture metadata only")
         print("  'i' - Capture image only")
+        print("  's' - Settings/Configuration mode")
         print("  'x' - Exit program")
         print("=" * 50)
     
@@ -208,18 +213,170 @@ def run_test_program():
         
         print(f"📊 Status: Frame ID: {frame_id} | FPGA: {'✅' if fpga_enabled else '❌'} | Metadata Camera: {'✅' if using_metadata else '❌'}")
     
+    def show_configuration_menu():
+        """Display the configuration menu"""
+        print("\n" + "=" * 60)
+        print("⚙️  CONFIGURATION MODE")
+        print("=" * 60)
+        print("Current Feature Settings:")
+        
+        # Display current feature status
+        for feature_name, feature_config in features.items():
+            enabled = feature_config.get('enabled', False)
+            status = "🟢 ON " if enabled else "🔴 OFF"
+            print(f"  {feature_name.replace('_', ' ').title()}: {status}")
+        
+        print("\nConfiguration Options:")
+        print("  '1' - Toggle Face Detection")
+        print("  '2' - Toggle Person Detection") 
+        print("  '3' - Toggle Hand Landmarks")
+        print("  '4' - Toggle Face ID")
+        print("  '5' - Toggle Face ID Multi")
+        print("  '6' - Toggle Object Detection")
+        print("  'a' - Enable All Features")
+        print("  'd' - Disable All Features")
+        print("  'r' - Reset to Config File Defaults")
+        print("  's' - Save Current Settings to Config File")
+        print("  'b' - Back to Main Menu")
+        print("=" * 60)
+    
+    def toggle_feature(feature_key):
+        """Toggle a specific feature on/off"""
+        if feature_key in features:
+            current_state = features[feature_key].get('enabled', False)
+            features[feature_key]['enabled'] = not current_state
+            new_state = "enabled" if not current_state else "disabled"
+            feature_name = feature_key.replace('_', ' ').title()
+            print(f"✅ {feature_name} {new_state}")
+            return True
+        return False
+    
+    def enable_all_features():
+        """Enable all features"""
+        for feature_key in features:
+            features[feature_key]['enabled'] = True
+        print("✅ All features enabled")
+    
+    def disable_all_features():
+        """Disable all features"""
+        for feature_key in features:
+            features[feature_key]['enabled'] = False
+        print("✅ All features disabled")
+    
+    def reset_to_defaults():
+        """Reset features to config file defaults"""
+        try:
+            with open("config.yaml") as f:
+                default_config = yaml.safe_load(f)
+            
+            default_features = default_config.get('features', {})
+            for feature_key in features:
+                if feature_key in default_features:
+                    features[feature_key]['enabled'] = default_features[feature_key].get('enabled', False)
+            
+            print("✅ Features reset to config file defaults")
+        except Exception as e:
+            print(f"❌ Failed to reset to defaults: {e}")
+    
+    def save_config_to_file():
+        """Save current feature settings to config file"""
+        try:
+            # Load current config
+            with open("config.yaml") as f:
+                current_config = yaml.safe_load(f)
+            
+            # Update features section
+            current_config['features'] = features
+            
+            # Write back to file
+            with open("config.yaml", 'w') as f:
+                yaml.dump(current_config, f, default_flow_style=False, indent=2)
+            
+            print("✅ Configuration saved to config.yaml")
+        except Exception as e:
+            print(f"❌ Failed to save configuration: {e}")
+    
+    def apply_feature_configuration():
+        """Apply current feature configuration to EVE"""
+        try:
+            print("🔄 Applying feature configuration...")
+            
+            if wrapper.isFpgaEnabled():
+                wrapper.configureFpga(features)
+            else:
+                wrapper.configure(features)
+            
+            print("✅ Feature configuration applied successfully")
+        except Exception as e:
+            print(f"❌ Failed to apply configuration: {e}")
+    
+    def run_configuration_mode():
+        """Run the interactive configuration mode"""
+        while True:
+            show_configuration_menu()
+            
+            try:
+                print("\nEnter configuration command: ", end="", flush=True)
+                cmd = input().strip().lower()
+                
+                if cmd == '1':
+                    toggle_feature('face_detection')
+                    apply_feature_configuration()
+                elif cmd == '2':
+                    toggle_feature('person_detection')
+                    apply_feature_configuration()
+                elif cmd == '3':
+                    toggle_feature('hand_landmarks')
+                    apply_feature_configuration()
+                elif cmd == '4':
+                    toggle_feature('face_id')
+                    apply_feature_configuration()
+                elif cmd == '5':
+                    toggle_feature('face_id_multi')
+                    apply_feature_configuration()
+                elif cmd == '6':
+                    toggle_feature('object_detection')
+                    apply_feature_configuration()
+                elif cmd == 'a':
+                    enable_all_features()
+                    apply_feature_configuration()
+                elif cmd == 'd':
+                    disable_all_features()
+                    apply_feature_configuration()
+                elif cmd == 'r':
+                    reset_to_defaults()
+                    apply_feature_configuration()
+                elif cmd == 's':
+                    save_config_to_file()
+                elif cmd == 'b':
+                    print("🔙 Returning to main menu...")
+                    break
+                elif cmd == '':
+                    continue
+                else:
+                    print(f"❌ Unknown command: '{cmd}'")
+                    print("Please use valid configuration commands")
+                    
+            except KeyboardInterrupt:
+                print("\n🔙 Returning to main menu...")
+                break
+            except EOFError:
+                print("\n🔙 End of input detected, returning to main menu...")
+                break
+    
     # Main program loop
     try:
-        show_menu()
-        
         while True:
+            
+            show_menu()
+            
             # Show current status
             get_status_info()
             
             # Get user input
             try:
                 # For cross-platform compatibility, use input() instead of getch()
-                print("\nEnter command (c/m/i/x): ", end="", flush=True)
+                print("\nEnter command (c/m/i/s/x): ", end="", flush=True)
                 command = input().strip().lower()
                 
                 if command == 'c':
@@ -247,6 +404,10 @@ def run_test_program():
                     time.sleep(0.1)
                     save_image("image.jpg")
                 
+                elif command == 's':
+                    print("\n⚙️  Entering configuration mode...")
+                    run_configuration_mode()
+                
                 elif command == 'x':
                     print("\n👋 Exiting program...")
                     break
@@ -257,7 +418,7 @@ def run_test_program():
                     
                 else:
                     print(f"\n❌ Unknown command: '{command}'")
-                    print("Please use: 'c' (capture), 'm' (metadata), 'i' (image), or 'x' (exit)")
+                    print("Please use: 'c' (capture), 'm' (metadata), 'i' (image), 's' (settings), 'f' (fpga), or 'x' (exit)")
                     
             except KeyboardInterrupt:
                 print("\n\n⏹️  Program interrupted by user (Ctrl+C)")

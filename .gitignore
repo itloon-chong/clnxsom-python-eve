@@ -149,3 +149,5 @@ Thumbs.db
 config_local.yaml
 *.bak
 *.tmp
+image.jpg
+metadata.txt
