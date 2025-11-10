@@ -17,6 +17,7 @@ CAPTURE MODES:
 - 'm': Capture metadata only -> saves to metadata.txt
 - 'i': Capture image only -> saves to image.jpg
 - 's': Settings/Configuration mode -> configure EVE features interactively
+- 'f': Face ID Registration mode -> register or clear face IDs
 - 'x': Exit program
 
 RASPBERRY PI SETUP REQUIREMENTS:
@@ -88,6 +89,7 @@ def run_test_program():
     - 'm': Capture metadata only -> saves to metadata.txt
     - 'i': Capture image only -> saves to image.jpg
     - 's': Settings/Configuration mode -> configure EVE features interactively
+    - 'f': Face ID Registration mode -> register or clear face IDs
     - 'x': Exit program
     """
     
@@ -162,6 +164,7 @@ def run_test_program():
         print("  'm' - Capture metadata only")
         print("  'i' - Capture image only")
         print("  's' - Settings/Configuration mode")
+        print("  'f' - Face ID Registration mode")
         print("  'x' - Exit program")
         print("=" * 50)
     
@@ -310,6 +313,79 @@ def run_test_program():
         except Exception as e:
             print(f"❌ Failed to apply configuration: {e}")
     
+    def show_face_id_menu():
+        """Display the Face ID registration menu"""
+        print("\n" + "=" * 50)
+        print("👤 FACE ID MODE")
+        print("=" * 50)
+        
+        # Check current Face ID status
+        face_id_enabled = features.get('face_id', {}).get('enabled', False)
+        face_id_multi_enabled = features.get('face_id_multi', {}).get('enabled', False)
+        
+        print("Current Status:")
+        print(f"  Face ID: {'🟢 ENABLED' if face_id_enabled else '🔴 DISABLED'}")
+        print(f"  Multi Face ID: {'🟢 ENABLED' if face_id_multi_enabled else '🔴 DISABLED'}")
+        
+        print("\nCommands:")
+        print("  'r' - Register Face ID")
+        print("  'c' - Clear Face ID")
+        print("  'b' - Back to Main Menu")
+        print("=" * 50)
+    
+    def register_face_id():
+        """Register a new Face ID"""
+        try:
+            print("🔄 Registering Face ID...")
+            wrapper.registerFaceID()
+            print("✅ Face ID registration command sent!")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to register Face ID: {e}")
+            return False
+    
+    def clear_face_ids():
+        """Clear all Face IDs from the system"""
+        try:
+            print("🔄 Clearing Face IDs...")
+            wrapper.clearFaceID()
+            print("✅ Face ID clear command sent!")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to clear Face IDs: {e}")
+            return False
+    
+
+    
+    def run_face_id_mode():
+        """Run the interactive Face ID registration mode"""
+        while True:
+            show_face_id_menu()
+            
+            try:
+                print("\nEnter Face ID command: ", end="", flush=True)
+                cmd = input().strip().lower()
+                
+                if cmd == 'r':
+                    register_face_id()
+                elif cmd == 'c':
+                    clear_face_ids()
+                elif cmd == 'b':
+                    print("🔙 Returning to main menu...")
+                    break
+                elif cmd == '':
+                    continue
+                else:
+                    print(f"❌ Unknown command: '{cmd}'")
+                    print("Please use: 'r' (register), 'c' (clear), or 'b' (back)")
+                    
+            except KeyboardInterrupt:
+                print("\n🔙 Returning to main menu...")
+                break
+            except EOFError:
+                print("\n🔙 End of input detected, returning to main menu...")
+                break
+    
     def run_configuration_mode():
         """Run the interactive configuration mode"""
         while True:
@@ -376,7 +452,7 @@ def run_test_program():
             # Get user input
             try:
                 # For cross-platform compatibility, use input() instead of getch()
-                print("\nEnter command (c/m/i/s/x): ", end="", flush=True)
+                print("\nEnter command (c/m/i/s/f/x): ", end="", flush=True)
                 command = input().strip().lower()
                 
                 if command == 'c':
@@ -408,6 +484,10 @@ def run_test_program():
                     print("\n⚙️  Entering configuration mode...")
                     run_configuration_mode()
                 
+                elif command == 'f':
+                    print("\n👤 Entering Face ID registration mode...")
+                    run_face_id_mode()
+                
                 elif command == 'x':
                     print("\n👋 Exiting program...")
                     break
@@ -418,7 +498,7 @@ def run_test_program():
                     
                 else:
                     print(f"\n❌ Unknown command: '{command}'")
-                    print("Please use: 'c' (capture), 'm' (metadata), 'i' (image), 's' (settings), 'f' (fpga), or 'x' (exit)")
+                    print("Please use: 'c' (capture), 'm' (metadata), 'i' (image), 's' (settings), 'f' (face ID), or 'x' (exit)")
                     
             except KeyboardInterrupt:
                 print("\n\n⏹️  Program interrupted by user (Ctrl+C)")
