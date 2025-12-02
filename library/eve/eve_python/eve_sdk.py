@@ -22,6 +22,8 @@ class EveSDK:
         self.cdll.StartEve.argtypes = []
         self.cdll.EveSendImageForProcessing.restype = structs.EveError
         self.cdll.EveSendImageForProcessing.argtypes = [structs.EveInputImage]
+        self.cdll.EveSendFpgaDataManually.restype = structs.EveError
+        self.cdll.EveSendFpgaDataManually.argtypes = [structs.EveFpgaManualData]        
         self.cdll.ShutdownEve.restype = structs.EveError
         self.cdll.ShutdownEve.argtypes = []
 
@@ -130,6 +132,9 @@ class EveSDK:
     
     def EveSendImageForProcessing(self, image: structs.EveInputImage) -> structs.EveError:
         return self.cdll.EveSendImageForProcessing(image)
+        
+    def EveSendFpgaDataManually(self, image: structs.EveFpgaManualData) -> structs.EveError:
+        return self.cdll.EveSendFpgaDataManually(image)
     
     def ShutdownEve(self) -> structs.EveError:
         return self.cdll.ShutdownEve()    

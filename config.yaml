@@ -7,7 +7,7 @@ i2c:
 eve:
   comport: 0
   pipeline_version: 0
-  eve_path: '/opt/EVE-6.6.0-Source/bin'
+  eve_path: '/opt/EVE-6.7.3-Source/bin'
   driver_path: '/home/lattice/mY_Work/eve-cam/clnx_camDrvEn'
   to_jpg: true
   copy_image: false

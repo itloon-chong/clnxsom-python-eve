@@ -30,3 +30,19 @@ class CCamera(ctypes.Structure):
 		("isIrCamera", ctypes.c_uint),
 	]
 
+class CCameraParameters(ctypes.Structure):
+	_fields_ = [
+		("width", ctypes.c_int),
+		("height", ctypes.c_int),
+		("focalLength", ctypes.c_double),
+		("pixelSizeX", ctypes.c_double),
+		("pixelSizeY", ctypes.c_double),
+		("principalPointX", ctypes.c_double),
+		("principalPointY", ctypes.c_double),
+		("depthMin", ctypes.c_double),
+		("depthMax", ctypes.c_double),
+		("screenLocationXinMM", ctypes.c_float),
+		("screenLocationYinMM", ctypes.c_float),
+		("isInfrared", ctypes.c_int),
+	]
+

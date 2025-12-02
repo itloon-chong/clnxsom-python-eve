@@ -6,6 +6,7 @@ EVE_FPGA_LANDMARKS = 23
 EVE_FPGA_MAX_USERS = 10
 EVE_FPGA_MAX_PERSONS = 5
 EVE_FPGA_MAX_HAND_LANDMARKS = 11
+EVE_FPGA_HAND_LANDMARKS = 10
 EVE_FPGA_MAX_OBJECT_DETECTION = 50
 PT_SIZE = 6
 MT_SIZE = 4
@@ -15,6 +16,8 @@ class EveFpgaConnectionType(CtypesEnum):
 	EVE_FPGA_AUTO_SELECT = 0
 	EVE_FPGA_UART = 1
 	EVE_FPGA_I2C = 2
+	EVE_FPGA_HUB = 3
+	EVE_FPGA_MANUAL = 4
 
 class EveFpgaConnectionRequest(CtypesEnum):
 	EVE_FPGA_STOP = 0
@@ -165,6 +168,8 @@ class CFpgaDataContent(ctypes.Structure):
 		("isUsersDataAvilable", ctypes.c_bool),
 		("isFaceIdDataAvailable", ctypes.c_bool),
 		("isObjectDetectionAvailable", ctypes.c_bool),
+		("isCameraStreaming", ctypes.c_bool),
+		("isHandGestureDataAvailable", ctypes.c_bool),
 	]
 
 class CFpgaBlinkData(ctypes.Structure):
@@ -215,20 +220,16 @@ class CFpgaLandmark(ctypes.Structure):
 
 class CFpgaHandData(ctypes.Structure):
 	_fields_ = [
-		("validationScore", ctypes.c_int16),
-		("gesture", ctypes.c_int),
-		("landmarks", CPoint3i * EVE_FPGA_MAX_HAND_LANDMARKS),
+		("validationScore", ctypes.c_float),
 		("handBox", CRect2i),
-		("isDetected", ctypes.c_bool),
+		("landmarks", CPoint3f * EVE_FPGA_MAX_HAND_LANDMARKS),
 	]
 
 class CFpgaHandsData(ctypes.Structure):
 	_fields_ = [
 		("numberOfHandLandmarkPoints", ctypes.c_int16),
-		("rightHandData", CFpgaHandData),
-		("leftHandData", CFpgaHandData),
-		("isRightHandDataAvailable", ctypes.c_bool),
-		("isLeftHandDataAvailable", ctypes.c_bool),
+		("handData", CFpgaHandData),
+		("gesture", ctypes.c_int),
 		("isHandBoxAvailable", ctypes.c_bool),
 		("isHandLandmark3D", ctypes.c_bool),
 	]
@@ -269,13 +270,7 @@ class CFpgaPersonData(ctypes.Structure):
 		("numberOfPersonLandmarkPoints", ctypes.c_int16),
 		("landmarks", CPoint3i * EVE_FPGA_LANDMARKS),
 		("personBox", CRect2i),
-		("isPersonConfidenceAvailable", ctypes.c_bool),
-		("isPersonDistanceAvailable", ctypes.c_bool),
-		("isPersonPostureAvailable", ctypes.c_bool),
-		("isPersonPostureConfidenceAvailable", ctypes.c_bool),
-		("isPersonPositionAvailable", ctypes.c_bool),
-		("isPersonLandmark3d", ctypes.c_bool),
-		("isPersonGeometricBoxAvailable", ctypes.c_bool),
+		("isPersonDataAvailable", ctypes.c_bool),
 	]
 
 class CFpgaObjectDetection(ctypes.Structure):
@@ -297,7 +292,6 @@ class CFpgaUserData(ctypes.Structure):
 		("status", ctypes.c_int),
 		("scale", ctypes.c_float),
 		("faceData", CFpgaFaceData),
-		("handsData", CFpgaHandsData),
 		("personData", CFpgaPersonData),
 		("isIdealUser", ctypes.c_bool),
 		("isIdValid", ctypes.c_bool),
@@ -325,6 +319,7 @@ class CFpgaPipelineData(ctypes.Structure):
 		("userData", CFpgaUserData * EVE_FPGA_MAX_USERS),
 		("objectData", CFpgaObjectData),
 		("faceId", CFpgaFaceIdData),
+		("handsData", CFpgaHandsData),
 	]
 
 class CFpgaMessage(ctypes.Structure):
@@ -338,7 +333,6 @@ class CFpgaMessage(ctypes.Structure):
 class CFpgaData(ctypes.Structure):
 	_fields_ = [
 		("message", CFpgaMessage),
-		("idealPerson", CFpgaIdealPersonData),
 		("pipelineData", CFpgaPipelineData),
 	]
 
@@ -376,6 +370,12 @@ class EveFpgaMetadata(ctypes.Structure):
 	_fields_ = [
 		("data", ctypes.POINTER(CFpgaData)),
 		("errorCode", ctypes.c_int),
+	]
+
+class EveFpgaManualData(ctypes.Structure):
+	_fields_ = [
+		("data", ctypes.POINTER(ctypes.c_ubyte)),
+		("size", ctypes.c_int),
 	]
 
 class EveFpgaJsonMetadata(ctypes.Structure):

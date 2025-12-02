@@ -18,6 +18,7 @@ CAPTURE MODES:
 - 'i': Capture image only -> saves to image.jpg
 - 's': Settings/Configuration mode -> configure EVE features interactively
 - 'f': Face ID Registration mode -> register or clear face IDs
+- 'u': Toggle ULP mode (Ultra Low Power) - [e] enabled / [d] disabled
 - 'x': Exit program
 
 RASPBERRY PI SETUP REQUIREMENTS:
@@ -90,6 +91,7 @@ def run_test_program():
     - 'i': Capture image only -> saves to image.jpg
     - 's': Settings/Configuration mode -> configure EVE features interactively
     - 'f': Face ID Registration mode -> register or clear face IDs
+    - 'u': Toggle ULP mode (Ultra Low Power) - [e] enabled / [d] disabled
     - 'x': Exit program
     """
     
@@ -121,11 +123,12 @@ def run_test_program():
             i2cDevice=i2c_config.get('device_address', 0x30),
             i2cIRQ=i2c_config.get('irq_pin', 26),
             pipelineVersion=eve_config.get('pipeline_version', 0),
-            evePath=eve_config.get('eve_path', '/opt/EVE-6.6.0-Source/bin'),
+            evePath=eve_config.get('eve_path', '/opt/EVE-6.7.21-Source/bin'),
             toJpg=eve_config.get('to_jpg', True),
             copyImage=eve_config.get('copy_image', True),  # Enable image copying for capture
             maxWidth=eve_config.get('max_width', 800),
-            driverPath=eve_config.get('driver_path', '/home/lattice/mY_Work/eve-cam/clnx_camDrvEn')
+            driverPath=eve_config.get('driver_path', '/home/lattice/mY_Work/eve-cam/clnx_camDrvEn'),
+            objectDetection=eve_config.get('object_detection', False)
         )
         
         # Initialize with metadata camera setting from config
@@ -165,6 +168,14 @@ def run_test_program():
         print("  'i' - Capture image only")
         print("  's' - Settings/Configuration mode")
         print("  'f' - Face ID Registration mode")
+        
+        # Show ULP mode status and toggle option
+        ulp_enabled = wrapper.isUlpEnabled()
+        if ulp_enabled:
+            print("  'u [d]' - Disable ULP mode")
+        else:
+            print("  'u [e]' - Enable ULP mode")
+        
         print("  'x' - Exit program")
         print("=" * 50)
     
@@ -213,8 +224,9 @@ def run_test_program():
         frame_id = wrapper.get_frame_id()
         fpga_enabled = wrapper.isFpgaEnabled()
         using_metadata = wrapper.isUsingMetadata()
+        ulp_enabled = wrapper.isUlpEnabled()
         
-        print(f"📊 Status: Frame ID: {frame_id} | FPGA: {'✅' if fpga_enabled else '❌'} | Metadata Camera: {'✅' if using_metadata else '❌'}")
+        print(f"📊 Status: Frame ID: {frame_id} | FPGA: {'✅' if fpga_enabled else '❌'} | Metadata Camera: {'✅' if using_metadata else '❌'} | ULP: {'✅' if ulp_enabled else '❌'}")
     
     def show_configuration_menu():
         """Display the configuration menu"""
@@ -440,6 +452,31 @@ def run_test_program():
                 print("\n🔙 End of input detected, returning to main menu...")
                 break
     
+    def handle_ulp_command():
+        """Handle ULP mode toggle - toggles between enabled and disabled based on current state"""
+        # Check current ULP state
+        current_state = wrapper.isUlpEnabled()
+        
+        # Toggle to opposite state
+        if current_state:
+            print("\n🔄 Disabling ULP mode...")
+            result = wrapper.enableUlp(False)
+            if "ULP Not available" in result:
+                print("❌ ULP mode is not available (requires FPGA and metadata camera)")
+            elif not wrapper.isUlpEnabled():
+                print("✅ ULP mode disabled successfully")
+            else:
+                print(f"⚠️  ULP disable result: {result}")
+        else:
+            print("\n🔄 Enabling ULP mode...")
+            result = wrapper.enableUlp(True)
+            if "ULP Not available" in result:
+                print("❌ ULP mode is not available (requires FPGA and metadata camera)")
+            elif wrapper.isUlpEnabled():
+                print("✅ ULP mode enabled successfully")
+            else:
+                print(f"⚠️  ULP enable result: {result}")
+    
     # Main program loop
     try:
         while True:
@@ -452,7 +489,7 @@ def run_test_program():
             # Get user input
             try:
                 # For cross-platform compatibility, use input() instead of getch()
-                print("\nEnter command (c/m/i/s/f/x): ", end="", flush=True)
+                print("\nEnter command (c/m/i/s/f/u/x): ", end="", flush=True)
                 command = input().strip().lower()
                 
                 if command == 'c':
@@ -488,6 +525,10 @@ def run_test_program():
                     print("\n👤 Entering Face ID registration mode...")
                     run_face_id_mode()
                 
+                elif command == 'u':
+                    # Toggle ULP mode
+                    handle_ulp_command()
+                
                 elif command == 'x':
                     print("\n👋 Exiting program...")
                     break
@@ -498,7 +539,7 @@ def run_test_program():
                     
                 else:
                     print(f"\n❌ Unknown command: '{command}'")
-                    print("Please use: 'c' (capture), 'm' (metadata), 'i' (image), 's' (settings), 'f' (face ID), or 'x' (exit)")
+                    print("Please use: 'c' (capture), 'm' (metadata), 'i' (image), 's' (settings), 'f' (face ID), 'u' (toggle ULP mode), or 'x' (exit)")
                     
             except KeyboardInterrupt:
                 print("\n\n⏹️  Program interrupted by user (Ctrl+C)")

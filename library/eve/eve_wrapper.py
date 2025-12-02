@@ -26,7 +26,7 @@ eve_sdk = None
 callback = None
 
 class EveWrapper():
-    def __init__(self, comport, i2cAdapter, i2cDevice, i2cIRQ, pipelineVersion, evePath, toJpg, copyImage, maxWidth, driverPath):
+    def __init__(self, comport, i2cAdapter, i2cDevice, i2cIRQ, pipelineVersion, evePath, toJpg, copyImage, maxWidth, driverPath, objectDetection):
         self._data = None
         self._image = None
         self._imageClone = None
@@ -49,6 +49,8 @@ class EveWrapper():
         self._fpgaCameraId = -1
         self._metaDataFpgaCameraId = -1
         self._usedCameraId = -1
+        self._objectDetection = objectDetection
+        self._ulpActivated = False
 
     def isInitialized(self):
         return eve_sdk != None
@@ -58,25 +60,13 @@ class EveWrapper():
             out = f"enableSomCamera: {enabled}\n"
             if enabled:
                 res = run(
-                    ["sudo", "pinctrl", "set", "21", "op"],
+                    ["sudo", "pinctrl", "set", "21", "dh"],
                     check=True, capture_output=True, text=True, timeout=5
                 )
                 out += res.stdout + "\n"
                 if res.returncode == 0:
                     res = run(
-                        ["sudo", "pinctrl", "set", "21", "dh"],
-                        check=True, capture_output=True, text=True, timeout=5
-                    )
-                    out += res.stdout + "\n"
-                if res.returncode == 0:
-                    res = run(
                         ["sudo", "insmod", f"{self._driverPath}/lscc-imx219.ko"],
-                        check=True, capture_output=True, text=True, timeout=5
-                    )
-                    out += res.stdout + "\n"
-                if res.returncode == 0:
-                    res = run(
-                        ["sudo", f"{self._driverPath}/config.out", "1"],# this isn't the same as self._i2cAdapter !!
                         check=True, capture_output=True, text=True, timeout=5
                     )
                     out += res.stdout + "\n"
@@ -118,6 +108,7 @@ class EveWrapper():
                 eve_sdk = sdk.EveSDK(eve_sdk_path)
                 
                 print(self.enableSomCamera(not useMetadataCamera))
+                self.enableUlp(self._ulpActivated)
                     
                 
             ByteArray512 = ctypes.c_byte * 512
@@ -218,6 +209,7 @@ class EveWrapper():
             if (err != sdk.structs.EveError.EVE_ERROR_NO_ERROR):
                 print(f"StartEve error code: {err}")
                 sys.exit(err)
+            self.querySettings()
         else:
             if self._is_windows:
                 eve_sdk = fpga.EveFpgaCameraPlugin("./EveFpgaCameraPlugin.dll")
@@ -239,7 +231,7 @@ class EveWrapper():
         fpgaParameters.comport = self._comport
         fpgaParameters.forceCameraOn = 1
         fpgaParameters.pipelineVersion = self._pipelineVersion
-        #fpgaParameters.connection = 2 #EveFpgaConnectionType::EVE_FPGA_AUTO_SELECT=0, UART=1, U2C=2
+        fpgaParameters.connection = 2 #EveFpgaConnectionType::EVE_FPGA_AUTO_SELECT=0, UART=1, U2C=2
         fpgaParameters.i2cAdapterNumber = self._i2cAdapter
         fpgaParameters.i2cDeviceNumber = self._i2cDevice
         fpgaParameters.i2cIRQPin = self._i2cIRQ
@@ -255,6 +247,7 @@ class EveWrapper():
             
         self.enableFpga(True, useMetadataCamera=useMetadataCamera)
         
+    def querySettings(self):
         typeMask = 0
         settingsMask = 0
         for pt in [sdk.structs.pipeline_config_type_t.PT_FD, sdk.structs.pipeline_config_type_t.PT_LM_FV, sdk.structs.pipeline_config_type_t.PT_FID, sdk.structs.pipeline_config_type_t.PT_PD]:
@@ -262,7 +255,7 @@ class EveWrapper():
         for st in [sdk.structs.setting_type_t.CS_ENABLED, sdk.structs.setting_type_t.CS_IPS, sdk.structs.setting_type_t.CS_CUSTOM]:
             settingsMask |= ( 1 << st )
         print("\t\tTYPE", typeMask, "SETTINGS", settingsMask)
-        eve_sdk.QueryFpgaSettings(typeMask, settingsMask, notify=True)
+        return eve_sdk.QueryFpgaSettings(typeMask, settingsMask, notify=True)
             
     def enableFpga(self, activate: bool, useMetadataCamera: bool):
         if not self.isInitialized():
@@ -276,6 +269,30 @@ class EveWrapper():
         if options.error != sdk.structs.EveError.EVE_ERROR_NO_ERROR:
             raise RuntimeError(f"Could't configure FPGA {options.error}")
             
+    def enableUlp(self, enabled: bool):
+        if not self.isFpgaEnabled or not self.isUsingMetadata():
+            return "ULP Not available"
+        try:
+            out = f"enableUlp: {enabled}\n"
+            res = run(
+                ["sudo", "pinctrl", "set", "13", "dl" if enabled else "dh"],
+                check=True, capture_output=True, text=True, timeout=5
+            )
+            out += res.stdout + "\n"
+            if res.returncode == 0:
+                res = run(
+                    ["sudo", "pinctrl", "set", "6", "dl" if enabled else "dh"],
+                    check=True, capture_output=True, text=True, timeout=5
+                )                
+                out += res.stdout + "\n"
+                if res.returncode == 0:
+                    self._ulpActivated = enabled
+            return out
+        except TimeoutExpired:
+            return "Timed out"
+        except CalledProcessError as e:
+            return f"Failed: {e.stderr or e.stdout}"
+
     def registerFaceID(self):
         if not eve_sdk:
             raise RuntimeError(f"Eve SDK not initialized")
@@ -305,7 +322,12 @@ class EveWrapper():
         if not eve_sdk:
             return False
         return self._metaDataFpgaCameraId == self._usedCameraId
-           
+         
+    def isUlpEnabled(self):
+        if not eve_sdk:
+            return False
+        return self._ulpActivated
+        
     def configure(self, feats):              
         if not eve_sdk:
             raise RuntimeError(f"Eve SDK not initialized")              
@@ -455,7 +477,9 @@ class EveWrapper():
                 jsonStr = ctypes.string_at(fpgaJson.textStart, fpgaJson.textSize)
                 self._jsonStr = jsonStr
                 dataJson = json.loads(jsonStr)
-                self._json = dataJson
+                if dataJson and dataJson['serial_status'] == 'success':
+                    self._frame_id += 1
+                    self._json = dataJson
             return_data.contents.request = requested_state
                 
 
@@ -494,7 +518,9 @@ class EveWrapper():
             jsonStr = ctypes.string_at(fpgaJson.textStart, fpgaJson.textSize)
             self._jsonStr = jsonStr
             dataJson = json.loads(jsonStr)
-            self._json = dataJson
+            if dataJson and dataJson['serial_status'] == 'success':
+                self._frame_id += 1            
+                self._json = dataJson
 
     def stop(self):
         if not eve_sdk:
