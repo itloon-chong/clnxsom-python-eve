@@ -50,7 +50,7 @@ from datetime import datetime
 # Add the library path to sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'library'))
 
-from eve.eve_wrapper import EveWrapper
+from eve_wrapper_ext import EveWrapperExt
 
 def test_prerequisites():
     """Test for required modules and packages"""
@@ -117,7 +117,7 @@ def run_test_program():
         i2c_config = config.get('i2c', {})
         eve_config = config.get('eve', {})
         
-        wrapper = EveWrapper(
+        wrapper = EveWrapperExt(
             comport=eve_config.get('comport', 0),
             i2cAdapter=i2c_config.get('bus', 0),
             i2cDevice=i2c_config.get('device_address', 0x30),
@@ -312,10 +312,20 @@ def run_test_program():
             
             if wrapper.isFpgaEnabled():
                 wrapper.configureFpga(features)
+                # Poll settings to get actual state from FPGA
+                time.sleep(0.2)  # Give FPGA time to process
+                wrapper.poll_settings()
+                # Update features dict with actual FPGA state
+                actual_state = wrapper.getFpgaState()
+                for feature_name, state in actual_state.items():
+                    if feature_name in features:
+                        features[feature_name]['enabled'] = state['enabled']
+                        if 'max_ips' in state:
+                            features[feature_name]['max_ips'] = state['max_ips']
+                print("✅ Feature configuration applied and verified")
             else:
                 wrapper.configure(features)
-            
-            print("✅ Feature configuration applied successfully")
+                print("✅ Feature configuration applied successfully")
         except Exception as e:
             print(f"❌ Failed to apply configuration: {e}")
     
