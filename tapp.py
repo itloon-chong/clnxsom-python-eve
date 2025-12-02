@@ -227,6 +227,21 @@ def run_test_program():
         print("⚙️  CONFIGURATION MODE")
         print("=" * 60)
         print("Current Feature Settings:")
+
+        time.sleep(0.5)  # slight delay to ensure settings are updated
+        
+        # Poll and update features with actual FPGA state
+        wrapper.querySettings() # recommended before polling
+        
+        time.sleep(0.5)  # slight delay to ensure settings are updated
+        
+        wrapper.poll_settings()
+        actual_state = wrapper.getFpgaState()
+        for feature_name, state in actual_state.items():
+            if feature_name in features:
+                features[feature_name]['enabled'] = state['enabled']
+                if 'max_ips' in state:
+                    features[feature_name]['max_ips'] = state['max_ips']
         
         # Display current feature status
         for feature_name, feature_config in features.items():
@@ -313,15 +328,7 @@ def run_test_program():
             if wrapper.isFpgaEnabled():
                 wrapper.configureFpga(features)
                 # Poll settings to get actual state from FPGA
-                time.sleep(0.2)  # Give FPGA time to process
-                wrapper.poll_settings()
-                # Update features dict with actual FPGA state
-                actual_state = wrapper.getFpgaState()
-                for feature_name, state in actual_state.items():
-                    if feature_name in features:
-                        features[feature_name]['enabled'] = state['enabled']
-                        if 'max_ips' in state:
-                            features[feature_name]['max_ips'] = state['max_ips']
+                time.sleep(0.5)  # Give FPGA time to process
                 print("✅ Feature configuration applied and verified")
             else:
                 wrapper.configure(features)
