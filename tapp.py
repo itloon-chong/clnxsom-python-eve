@@ -139,13 +139,13 @@ def run_test_program():
         # Configure features from config
         features = config.get('features', {
             "face_detection": {"enabled": True},
+            "face_validation": {"enabled": False},
             "person_detection": {"enabled": True},
             "hand_landmarks": {"enabled": True},
             "face_id": {"enabled": False},
             "face_id_multi": {"enabled": False},
             "object_detection": {"enabled": False}
         })
-        
         if wrapper.isFpgaEnabled():
             wrapper.configureFpga(features)
         else:
@@ -168,14 +168,7 @@ def run_test_program():
         print("  'i' - Capture image only")
         print("  's' - Settings/Configuration mode")
         print("  'f' - Face ID Registration mode")
-        
-        # Show ULP mode status and toggle option
-        ulp_enabled = wrapper.isUlpEnabled()
-        if ulp_enabled:
-            print("  'u [d]' - Disable ULP mode")
-        else:
-            print("  'u [e]' - Enable ULP mode")
-        
+        print("  'u' - Toggle ULP mode")        
         print("  'x' - Exit program")
         print("=" * 50)
     
@@ -243,11 +236,12 @@ def run_test_program():
         
         print("\nConfiguration Options:")
         print("  '1' - Toggle Face Detection")
-        print("  '2' - Toggle Person Detection") 
-        print("  '3' - Toggle Hand Landmarks")
-        print("  '4' - Toggle Face ID")
-        print("  '5' - Toggle Face ID Multi")
-        print("  '6' - Toggle Object Detection")
+        print("  '2' - Toggle Face Validation")
+        print("  '3' - Toggle Person Detection") 
+        print("  '4' - Toggle Hand Landmarks")
+        print("  '5' - Toggle Face ID")
+        print("  '6' - Toggle Face ID Multi")
+        print("  '7' - Toggle Object Detection")
         print("  'a' - Enable All Features")
         print("  'd' - Disable All Features")
         print("  'r' - Reset to Config File Defaults")
@@ -411,18 +405,21 @@ def run_test_program():
                     toggle_feature('face_detection')
                     apply_feature_configuration()
                 elif cmd == '2':
-                    toggle_feature('person_detection')
+                    toggle_feature('face_validation')
                     apply_feature_configuration()
                 elif cmd == '3':
-                    toggle_feature('hand_landmarks')
+                    toggle_feature('person_detection')
                     apply_feature_configuration()
                 elif cmd == '4':
-                    toggle_feature('face_id')
+                    toggle_feature('hand_landmarks')
                     apply_feature_configuration()
                 elif cmd == '5':
-                    toggle_feature('face_id_multi')
+                    toggle_feature('face_id')
                     apply_feature_configuration()
                 elif cmd == '6':
+                    toggle_feature('face_id_multi')
+                    apply_feature_configuration()
+                elif cmd == '7':
                     toggle_feature('object_detection')
                     apply_feature_configuration()
                 elif cmd == 'a':

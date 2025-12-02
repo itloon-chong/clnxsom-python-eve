@@ -17,12 +17,14 @@ eve:
 features:
   face_detection:
     enabled: true
+  face_validation:
+    enabled: true
   person_detection:
     enabled: true
   hand_landmarks:
-    enabled: true
-  face_id:
     enabled: false
+  face_id:
+    enabled: true
   face_id_multi:
     enabled: false
   object_detection:
